@@ -3,6 +3,8 @@ import torch
 import tiktoken
 import time
 import math
+import os
+from torch.distributed import init_process_group, destroy_process_group
 
 class DataLoader:
     def __init__(self, B, T):
@@ -28,10 +30,30 @@ class DataLoader:
         
         return x, y
 
-device = 'cpu'
-if torch.cuda.is_available():
-    device = 'cuda'
-print(f"Using model at {device}")
+# device = 'cpu'
+# if torch.cuda.is_available():
+#     device = 'cuda'
+# print(f"Using model at {device}")
+
+ddp = int(os.environ.get('RANK', -1)) != -1
+
+if ddp:
+    init_process_group(backend='nccl')
+    device = f'cuda:{torch.distributed.get_rank()}'
+    ddp_rank = torch.distributed.get_rank()
+    ddp_world_size = torch.distributed.get_world_size()
+    torch.cuda.set_device(device)
+    master_process = ddp_rank == 0
+else:
+    ddp_rank = 0
+    ddp_world_size = 1
+    master_process = True
+    if torch.cuda.is_available():
+        device = f'cuda:{torch.distributed.get_rank()}'
+    else:
+        device = 'cpu'
+
+print(f"Using device: {device}")
 
 enc = tiktoken.get_encoding('gpt2')
 with open('input.txt', 'r') as f:
@@ -42,8 +64,12 @@ tokens = enc.encode(text)
 
 batch_size = 524288
 B, T = 16, 1024
-assert batch_size % (B * T) == 0
-grad_accum = batch_size // (B * T)
+assert batch_size % (B * T * ddp_world_size) == 0
+grad_accum = batch_size // (B * T * ddp_world_size)
+
+if master_process:
+    print("At Master Process")
+    print(f"Batch size: {batch_size}, Gradient accumulation steps: {grad_accum}")
 
 print(f"Batch size: {batch_size}, Gradient accumulation steps: {grad_accum}")
 
