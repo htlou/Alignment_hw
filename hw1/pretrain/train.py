@@ -45,6 +45,7 @@ y = buffer[1:].view(B, T)
 
 model = GPT(GPTConfig())
 model.to(device)
+model = torch.compile(model)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr = 3e-4)
 
@@ -55,7 +56,8 @@ for i in range(100):
     start_time = time.time()
     x, y = data_loader.next_batch()
     optimizer.zero_grad()
-    logits, loss = model(x, y)
+    with torch.autocast(device, dtype=torch.bfloat16):
+        logits, loss = model(x, y)
     loss.backward()
     optimizer.step()
     torch.cuda.synchronize()
