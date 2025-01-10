@@ -64,7 +64,7 @@ def get_lr(it):
         coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
         return min_lr + coeff * (max_lr - min_lr)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr = max_lr)
+optimizer = torch.optim.AdamW(model.parameters(), lr = max_lr, betas = (0.9, 0.95), eps = 1e-8, weight_decay = 0.1, fused=True)
 
 data_loader = DataLoader(B, T)
 torch.set_float32_matmul_precision('high')
