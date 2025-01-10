@@ -5,11 +5,17 @@ import time
 import math
 import os
 from torch.distributed import init_process_group, destroy_process_group
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 class DataLoader:
-    def __init__(self, B, T):
+    def __init__(self, B, T, rank, num_workers):
         self.B = B
         self.T = T
+
+        self.rank = rank
+        self.num_workers = num_workers
+
         enc = tiktoken.get_encoding('gpt2')
         with open('input.txt', 'r') as f:
             text = f.read()
@@ -17,16 +23,16 @@ class DataLoader:
         self.tokens = torch.tensor(enc.encode(text))
         print(f"Loaded {len(self.tokens)} tokens")
         print(f"1 epoch = {len(self.tokens) // (B * T)} batches")
-        self.current = 0
-    
+        self.current = self.B * self.T * self.rank
+
     def next_batch(self):
         B, T = self.B, self.T
         buffer = self.tokens[self.current : self.current + B*T+1]
         x = (buffer[:-1]).view(B, T)
         y = (buffer[1:]).view(B, T)
-        self.current += B * T
-        if self.current + (B*T+1) > len(self.tokens):
-            self.current = 0
+        self.current += B * T * self.num_workers
+        if self.current + (B*T*self.num_workers+1) > len(self.tokens):
+            self.current = self.B * self.T * self.rank
         
         return x, y
 
@@ -81,6 +87,9 @@ model = GPT(GPTConfig())
 model.to(device)
 model = torch.compile(model)
 
+if ddp:
+    model = DDP(model, device_ids=[device])
+
 max_lr = 3e-4
 min_lr = 1e-4
 warmup_steps = 10
@@ -99,7 +108,7 @@ def get_lr(it):
 
 optimizer = torch.optim.AdamW(model.parameters(), lr = max_lr, betas = (0.9, 0.95), eps = 1e-8, weight_decay = 0.1, fused=True)
 
-data_loader = DataLoader(B, T)
+data_loader = DataLoader(B, T, ddp_rank, ddp_world_size)
 torch.set_float32_matmul_precision('high')
 
 for i in range(steps):
@@ -111,7 +120,13 @@ for i in range(steps):
         with torch.autocast(device, dtype=torch.bfloat16):
             logits, loss = model(x, y)
         accumulated_loss += loss.item()
+        if ddp:
+            model.require_backward_grad_sync = (j == grad_accum - 1)
     loss = accumulated_loss / grad_accum
+
+    if ddp:
+        dist.all_reduce(loss, op = dist.ReduceOp.AVG)
+
     loss.backward()
     norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
     lr = get_lr(i)
@@ -120,4 +135,8 @@ for i in range(steps):
     optimizer.step()
     torch.cuda.synchronize()
     end_time = time.time()
-    print(f"Step {i}, Loss: {loss.item()}, Norm: {norm.item()}, Time: {end_time - start_time}")
+    if master_process:
+        print(f"Step {i}, Loss: {loss.item()}, Norm: {norm.item()}, Time: {end_time - start_time}")
+
+if ddp:
+    destroy_process_group()
