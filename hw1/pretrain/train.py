@@ -47,7 +47,10 @@ model.to(device)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr = 3e-4)
 
+data_loader = DataLoader(B, T)
+
 for i in range(100):
+    x, y = data_loader.next_batch()
     optimizer.zero_grad()
     logits, loss = model(x, y)
     loss.backward()
