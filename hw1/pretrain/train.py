@@ -59,7 +59,8 @@ for i in range(100):
     with torch.autocast(device, dtype=torch.bfloat16):
         logits, loss = model(x, y)
     loss.backward()
+    norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
     optimizer.step()
     torch.cuda.synchronize()
     end_time = time.time()
-    print(f"Step {i}, Loss: {loss.item()}, Time: {end_time - start_time}")
+    print(f"Step {i}, Loss: {loss.item()}, Norm: {norm.item()}, Time: {end_time - start_time}")
