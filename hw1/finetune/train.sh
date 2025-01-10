@@ -1,12 +1,20 @@
+MODEL_NAME_OR_PATH=/data/align-anything/hantao/models/gpt2
+
+# get LoRA rank from input
+LORA_RANK=$1
+
+OUTPUT_DIR_NAME=outputs/gpt2-alpaca-lora-rank-$LORA_RANK
+DATA_PATH=./data/alpaca_data.json
+
 python train.py \
-    --model_name_or_path gpt2 \
+    --model_name_or_path $MODEL_NAME_OR_PATH \
     --max_length 512 \
     --trust_remote_code True \
     --use_lora False \
-    --lora_dim 8 \
+    --lora_dim $LORA_RANK \
     --lora_scaling 32 \
     --lora_module_name h. \
-    --data_path ./data/alpaca_data.json \
+    --data_path $DATA_PATH \
     --epochs 4 \
     --train_batch_size 8 \
     --gradient_accumulation_steps 4 \
@@ -17,4 +25,4 @@ python train.py \
     --eval_batch_size 16 \
     --eval_ratio 0.01 \
     --eval_interval 100 \
-    --output_dir_name gpt2-alpaca
+    --output_dir_name $OUTPUT_DIR_NAME
