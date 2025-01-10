@@ -147,7 +147,8 @@ class GPT(nn.Module):
                 with torch.no_grad():
                     sd[k].copy_(sd_hf[k])
 
-model = GPT.from_pretrained('gpt2')
+# model = GPT.from_pretrained('gpt2')
+model = GPT(GPTConfig())
 
 if model is None:
     print('model is None')
