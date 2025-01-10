@@ -1,11 +1,11 @@
 file_list=(
-    ~/models/Qwen-0.5B-Instruct
+    /data/align-anything/hantao/models/Beaver-0.5B-Instruct
     # you can replace it with other models
     # or add more models below
 )
 
 # set gpu to what you want
-export CUDA_VISIBLE_DEVICES="0"
+export CUDA_VISIBLE_DEVICES="1"
 
 INPUTFILE="./test.json"
 
@@ -15,7 +15,7 @@ for model in "${file_list[@]}"; do
 
     model_name="${model##*/}"
     echo ${model_name}'.json'
-    OUTPUT_DIR="./test/" # model name to change
+    OUTPUT_DIR="./baseline/" # model name to change
     OUTPUT_NAME=${model_name} # model name to change
 
     bash generation.sh \

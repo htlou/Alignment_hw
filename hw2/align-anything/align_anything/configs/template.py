@@ -155,6 +155,18 @@ class HOMEWORK(Template):
     assistant_prompt: str = '\n<|im_start|>assistant\n{output}\n<im_end|>'
     split_token: str = 'assistant\n'
     separator: str = ''
+
+    def format_supervised_sample(self, raw_sample: dict[str, Any]) -> dict[str, Any]:
+        prompt = raw_sample['prompt']
+        answer = raw_sample['answer']
+        text = (
+            f'{self.system_prompt}'
+            f'{self.user_prompt.format(input=prompt)}'
+            f'{self.assistant_prompt.format(output=answer)}'
+        )
+        prompt = f'{self.system_prompt}'f'{self.user_prompt.format(input=prompt)}'f'{self.assistant_prompt.format(output="")}'
+        return {'text': text, 'prompt': prompt}
+    
     def format_preference_sample(self, raw_sample: dict[str, Any]) -> dict[str, Any]:
         metrics = raw_sample['better_response_id']
         better_response = raw_sample[f'response_{int(metrics)}']

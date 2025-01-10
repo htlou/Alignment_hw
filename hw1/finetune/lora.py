@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import transformers
+import math
 
 from utils import recursive_getattr, recursive_setattr
 
@@ -11,24 +12,20 @@ class LoRALinear(torch.nn.Module):
         # Save original weight and bias
         self.weight = torch.nn.Parameter(weight)
         self.bias = torch.nn.Parameter(bias)
-        # TODO: Implement lora left and right weights
         self.lora_dim = lora_dim
-        if lora_dim > 0:
-            self.lora_right_weight = nn.Parameter(torch.zeros(weight.shape[1], lora_dim))
-            self.lora_left_weight  = nn.Parameter(torch.zeros(lora_dim, weight.shape[0]))
-        else:
-            # 如果 lora_dim=0, 说明不使用 LoRA
-            self.lora_right_weight = None
-            self.lora_left_weight  = None
+        # TODO: Implement lora left and right weights
+        in_features = weight.shape[1]
+        out_features = weight.shape[0]
+        self.lora_right_weight = nn.Parameter(torch.empty(lora_dim, in_features))
+        self.lora_left_weight = nn.Parameter(torch.empty(out_features, lora_dim))
         #############################################
-        self.lora_scaling = lora_scaling / lora_dim if lora_dim > 0 else 0.0
+        self.lora_scaling = lora_scaling / lora_dim
         self.init_parameters()
         # TODO: Freeze original weight and bias
         #
-        #######################################
         self.weight.requires_grad = False
-        if self.bias is not None:
-            self.bias.requires_grad = False
+        self.bias.requires_grad = False
+        #######################################
 
     def init_parameters(self):
         # TODO: Initialize LoRA parameters
@@ -36,22 +33,18 @@ class LoRALinear(torch.nn.Module):
         if self.lora_dim > 0:
             # 官方 LoRA 论文中，通常将 lora_right_weight 用正常的 xavier 初始化，
             # 而将 lora_left_weight 用零初始化，也可以都做零初始化。
-            nn.init.xavier_uniform_(self.lora_right_weight)
+            nn.init.kaiming_uniform_(self.lora_right_weight, a=math.sqrt(5))
             nn.init.zeros_(self.lora_left_weight)
 
     def forward(self, input):
         # TODO: Implement the forward function
         ######################################
-        out = input @ self.weight.transpose(0, 1)
-        if self.bias is not None:
-            out = out + self.bias
-
-        # LoRA 分支
-        if self.lora_dim > 0:
-            lora_out = (input @ self.lora_right_weight) @ self.lora_left_weight
-            out = out + self.lora_scaling * lora_out
-
-        return out
+        original_output = nn.functional.linear(input, self.weight, self.bias)
+        # LoRA 
+        lora_output = input @ self.lora_right_weight.t()  # shape: (batch_size, lora_dim)
+        lora_output = lora_output @ self.lora_left_weight.t()  # shape: (batch_size, output_dim)
+        lora_output = lora_output * self.lora_scaling
+        return original_output + lora_output
 
 
 def convert_linear_layer_to_lora(model, part_module_name, lora_dim=0, lora_scaling=1):
@@ -74,25 +67,16 @@ def convert_linear_layer_to_lora(model, part_module_name, lora_dim=0, lora_scali
 def only_optimize_lora_parameters(model):
     # TODO: Turn off the gradient of all the parameters except the LoRA parameters
     ##############################################################################
-    for param in model.parameters():
-        param.requires_grad = False
-
-    for module in model.modules():
-        if isinstance(module, LoRALinear):
-            # 解冻 LoRA 参数
-            if module.lora_right_weight is not None:
-                module.lora_right_weight.requires_grad = True
-            if module.lora_left_weight is not None:
-                module.lora_left_weight.requires_grad = True
+    for name, param in model.named_parameters():
+        if 'lora_' in name:
+            param.requires_grad = True
+        else:
+            param.requires_grad = False
+    return model
 
 def get_lora_state_dict(model):
     # TODO: return lora left and right weights as state dict
     # The saved state dict will be used later for loading
     ########################################################
-    lora_state_dict = {}
-    for name, module in model.named_modules():
-        if isinstance(module, LoRALinear) and module.lora_dim > 0:
-            lora_state_dict[name + ".lora_right_weight"] = module.lora_right_weight
-            lora_state_dict[name + ".lora_left_weight"]  = module.lora_left_weight
-
+    lora_state_dict = {k: v for k, v in model.state_dict().items() if 'lora_' in k}
     return lora_state_dict
