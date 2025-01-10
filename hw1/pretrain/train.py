@@ -2,6 +2,7 @@ from modeling_gpt2 import GPT, GPTConfig
 import torch
 import tiktoken
 import time
+import math
 
 class DataLoader:
     def __init__(self, B, T):
@@ -47,7 +48,23 @@ model = GPT(GPTConfig())
 model.to(device)
 model = torch.compile(model)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr = 3e-4)
+max_lr = 3e-4
+min_lr = 1e-4
+warmup_steps = 10
+steps = 1000
+
+def get_lr(it):
+    if it < warmup_steps:
+        return max_lr * it / warmup_steps
+    elif it > steps:
+        return min_lr
+    else:
+        decay_ratio = (it - warmup_steps) / (steps - warmup_steps)
+        assert 0 <= decay_ratio <= 1
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
+        return min_lr + coeff * (max_lr - min_lr)
+
+optimizer = torch.optim.AdamW(model.parameters(), lr = max_lr)
 
 data_loader = DataLoader(B, T)
 torch.set_float32_matmul_precision('high')
