@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from transformers import GPT2LMHeadModel
 import tiktoken
-
+import math
 
 @dataclass
 class GPTConfig:
@@ -37,11 +37,11 @@ class CausalSelfAttention(nn.Moudule):
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1,2) # (B, number of heads, seq length, head size)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1,2) # (B, number of heads, seq length, head size)
         # attention
-        att = (q @ k.transpose(-2. -1)) * (1.0 / math.sqrt(k.size(-1)))
+        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
         att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
         att = F.softmax(att, dim = -1)
         y = att @ v
-        y = y.transpose(1, 2).contiguous.view(B, T, C)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
         y = self.c_proj(y)
         return y
 
@@ -69,6 +69,7 @@ class Block(nn.Module):
     def forward(self, x):
         x = x + self.attn(self.ln_1(x))
         x = x + self.mlp(self.ln_2(x))
+        return x
 
 class GPT(nn.Module):
     def __init__(self, config):
@@ -147,17 +148,21 @@ class GPT(nn.Module):
                     sd[k].copy_(sd_hf[k])
 
 model = GPT.from_pretrained('gpt2')
-print('did not crash')
+
+if model is None:
+    print('model is None')
+else:
+    print('model is not None')
 
 max_length = 30
 num_return_seq = 5
 
 model.eval()
 model.to('cuda')
-enc = tiktoken.get_encoding()
+enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I am a language model,")
 tokens = torch.tensor(tokens, dtype=torch.long)
-tokens = tokens.unsqueeze(0).repeat(num_return_seq)
+tokens = tokens.unsqueeze(0).repeat(num_return_seq, 1)
 x = tokens.to('cuda')
 
 torch.manual_seed(42)
