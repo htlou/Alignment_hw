@@ -6,11 +6,17 @@ LORA_RANK=$1
 OUTPUT_DIR_NAME=outputs/gpt2-alpaca-lora-rank-$LORA_RANK
 DATA_PATH=./data/alpaca_data.json
 
+# if LORA_RANK > 0, use LoRA
+USE_LORA=False
+if [ $LORA_RANK -gt 0 ]; then
+    USE_LORA=True
+fi
+
 python train.py \
     --model_name_or_path $MODEL_NAME_OR_PATH \
     --max_length 512 \
     --trust_remote_code True \
-    --use_lora False \
+    --use_lora $USE_LORA \
     --lora_dim $LORA_RANK \
     --lora_scaling 32 \
     --lora_module_name h. \

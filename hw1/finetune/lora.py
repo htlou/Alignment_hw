@@ -30,11 +30,10 @@ class LoRALinear(torch.nn.Module):
     def init_parameters(self):
         # TODO: Initialize LoRA parameters
         ##################################
-        if self.lora_dim > 0:
-            # 官方 LoRA 论文中，通常将 lora_right_weight 用正常的 xavier 初始化，
-            # 而将 lora_left_weight 用零初始化，也可以都做零初始化。
-            nn.init.kaiming_uniform_(self.lora_right_weight, a=math.sqrt(5))
-            nn.init.zeros_(self.lora_left_weight)
+        # 官方 LoRA 论文中，通常将 lora_right_weight 用正常的 xavier 初始化，
+        # 而将 lora_left_weight 用零初始化，也可以都做零初始化。
+        nn.init.kaiming_uniform_(self.lora_right_weight, a=math.sqrt(5))
+        nn.init.zeros_(self.lora_left_weight)
 
     def forward(self, input):
         # TODO: Implement the forward function
