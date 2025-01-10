@@ -148,6 +148,39 @@ class Dialogue(Template):
         }
         return return_dict
     
+@register_template('HOMEWORK')
+class HOMEWORK(Template):
+    system_prompt: str = ''
+    user_prompt: str = '<|im_start|>user\n{input}\n<im_end|>'
+    assistant_prompt: str = '\n<|im_start|>assistant\n{output}\n<im_end|>'
+    split_token: str = 'assistant\n'
+    separator: str = ''
+    def format_preference_sample(self, raw_sample: dict[str, Any]) -> dict[str, Any]:
+        metrics = raw_sample['better_response_id']
+        better_response = raw_sample[f'response_{int(metrics)}']
+        worse_response = raw_sample[f'response_{1-int(metrics)}']
+        prompt = raw_sample['prompt']
+
+        formatted_better_output = (
+            f'{self.system_prompt}'
+            f'{self.user_prompt.format(input=prompt)}'
+            f'{self.assistant_prompt.format(output=better_response)}'
+        )
+        formatted_worse_output = (
+            f'{self.system_prompt}'
+            f'{self.user_prompt.format(input=prompt)}'
+            f'{self.assistant_prompt.format(output=worse_response)}'
+        )
+
+        return {
+            'better_text': formatted_better_output,
+            'worse_text': formatted_worse_output,
+        }
+
+    def check_equal(self, raw_sample: dict[str, Any]) -> bool:
+        return False
+
+
 @register_template('Aligner')
 class Aligner(Template):
     system_prompt: str = ''

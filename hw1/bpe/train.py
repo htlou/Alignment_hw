@@ -2,7 +2,7 @@ from tokenizer import Tokenizer
 from transformers import GPT2Tokenizer
 
 # Load GPT-2 tokenizer
-gpt2_tokenizer = GPT2Tokenizer.from_pretrained('/home/pku0018/models/gpt2')
+gpt2_tokenizer = GPT2Tokenizer.from_pretrained('/data/align-anything/hantao/models/gpt2')
 
 # Your BPE tokenizer setup
 with open("manual.txt", "rb") as f:
