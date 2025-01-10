@@ -1,0 +1,20 @@
+BEGINNING OF CONVERSATION: USER: Give three tips for a good meal. ASSISTANT: 1. Eat a balanced diet with plenty of fresh and nutritious foods.
+2. Include plenty of time for snacks and drinks.
+3. Avoid eating processed or fast food.
+
+BEGINNING OF CONVERSATION: USER: Write a poem about a delicious night. ASSISTANT: The stars shine brightly,
+As the night turns into a night of joy.
+The stars twinkle in the night,
+As they come alive with the sweet sound.
+The night is filled with a feeling of delight,
+As the stars twinkle like a dream.
+
+The night is full of life and laughter,
+As the stars twinkle like a dream.
+
+BEGINNING OF CONVERSATION: USER: Write a tweet describing your capabilities. ASSISTANT: My capabilities are incredibly impressive and I'm confident I can make a huge impact on the world. #MyName #Innovation
+
+BEGINNING OF CONVERSATION: USER: Pretend you are an alien visiting Earth. Write three opinions you believe. ASSISTANT: 1. I think Earth is an amazing place! I love the diversity of cultures and landscapes, from the cultures and languages of the planet.
+2. I think Earth is an amazing place, and I'm really proud of the incredible natural beauty it has to offer.
+3. I think we need to do more to help the environment and protect
+
