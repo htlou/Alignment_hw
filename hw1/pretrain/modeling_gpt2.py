@@ -147,40 +147,62 @@ class GPT(nn.Module):
                 with torch.no_grad():
                     sd[k].copy_(sd_hf[k])
 
-# model = GPT.from_pretrained('gpt2')
-model = GPT(GPTConfig())
+device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
+print(f"Using model at {device}")
 
-if model is None:
-    print('model is None')
-else:
-    print('model is not None')
-
-max_length = 30
-num_return_seq = 5
-
-model.eval()
-model.to('cuda')
 enc = tiktoken.get_encoding('gpt2')
-tokens = enc.encode("Hello, I am a language model,")
-tokens = torch.tensor(tokens, dtype=torch.long)
-tokens = tokens.unsqueeze(0).repeat(num_return_seq, 1)
-x = tokens.to('cuda')
+with open('input.txt', 'r') as f:
+    text = f.read()
+f.close()
+text = text[:1000]
+tokens = enc.encode(text)
+B, T = 4, 32
+buffer = torch.tensor(tokens[:B*T + 1]).to(device)
+x = buffer[:-1].view(B, T)
+y = buffer[1:].view(B, T)
 
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
-while x.size(1) < max_length:
-    with torch.no_grad():
-        logits = model(x)
-        # only care last col logits
-        logits = logits[:, -1, :]
-        probs = F.softmax(logits, dim = -1)
-        topk_probs , topk_indices = torch.topk(probs, 50, dim = -1)
-        # (B, 1) select tokens and coresponding idx
-        ix = torch.multinomial(topk_probs, 1)
-        xcol = torch.gather(topk_indices, -1, ix)
-        x = torch.cat((x, xcol), dim= -1)
+model = GPT(GPTConfig())
+model.to(device)
+logits = model(x)
 
-for i in range(num_return_seq):
-    tokens = x[i, :max_length].tolist()
-    decoded = enc.decode(tokens)
-    print(decoded)
+print(logits.shape)
+
+# model = GPT.from_pretrained('gpt2')
+# model = GPT(GPTConfig())
+
+# if model is None:
+#     print('model is None')
+# else:
+#     print('model is not None')
+
+# max_length = 30
+# num_return_seq = 5
+
+# model.eval()
+# model.to('cuda')
+# enc = tiktoken.get_encoding('gpt2')
+# tokens = enc.encode("Hello, I am a language model,")
+# tokens = torch.tensor(tokens, dtype=torch.long)
+# tokens = tokens.unsqueeze(0).repeat(num_return_seq, 1)
+# x = tokens.to('cuda')
+
+# torch.manual_seed(42)
+# torch.cuda.manual_seed(42)
+# while x.size(1) < max_length:
+#     with torch.no_grad():
+#         logits = model(x)
+#         # only care last col logits
+#         logits = logits[:, -1, :]
+#         probs = F.softmax(logits, dim = -1)
+#         topk_probs , topk_indices = torch.topk(probs, 50, dim = -1)
+#         # (B, 1) select tokens and coresponding idx
+#         ix = torch.multinomial(topk_probs, 1)
+#         xcol = torch.gather(topk_indices, -1, ix)
+#         x = torch.cat((x, xcol), dim= -1)
+
+# for i in range(num_return_seq):
+#     tokens = x[i, :max_length].tolist()
+#     decoded = enc.decode(tokens)
+#     print(decoded)
