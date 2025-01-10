@@ -111,6 +111,8 @@ optimizer = torch.optim.AdamW(model.parameters(), lr = max_lr, betas = (0.9, 0.9
 data_loader = DataLoader(B, T, ddp_rank, ddp_world_size)
 torch.set_float32_matmul_precision('high')
 
+eval_interval = 100
+
 for i in range(steps):
     start_time = time.time()
     x, y = data_loader.next_batch()
@@ -137,6 +139,25 @@ for i in range(steps):
     end_time = time.time()
     if master_process:
         print(f"Step {i}, Loss: {loss.item()}, Norm: {norm.item()}, Time: {end_time - start_time}")
+
+    if i % eval_interval == 0:
+        model.eval()
+        val_loader.reset()
+        with torch.no_grad():
+            val_loss_accum = 0.0
+            val_loss_steps = 20
+            for _ in range(val_loss_steps):
+                x, y = val_loader.next_batch()
+                x, y = x.to(device), y.to(device)
+                with torch.autocast(device_type=device, dtype=torch.bfloat16):
+                    logits, loss = model(x, y)
+                    loss = loss / val_loss_steps
+                    val_loss_accum += loss.detach()
+        if ddp:
+            dist.all_reduce(val_loss_accum, op=dist.ReduceOp.AVG)
+        if master_process:
+            print(f"validation loss: {val_loss_accum.item():.4f}")
+        model.train()
 
 if ddp:
     destroy_process_group()
