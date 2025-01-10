@@ -38,10 +38,13 @@ class CausalSelfAttention(nn.Moudule):
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1,2) # (B, number of heads, seq length, head size)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1,2) # (B, number of heads, seq length, head size)
         # attention
-        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
-        att = F.softmax(att, dim = -1)
-        y = att @ v
+        # att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+        # att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))
+        # att = F.softmax(att, dim = -1)
+        # y = att @ v
+
+        y = F.scaled_dot_product_attention(q, k, v, attn_mask=self.bias[:, :, :T, :T] == 0, dropout_p=0.0, is_causal=True)
+
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         y = self.c_proj(y)
         return y
