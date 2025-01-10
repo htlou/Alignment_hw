@@ -1,0 +1,7 @@
+==PROF== Connected to process 1393730 (/data/align-anything/hantao/Alignment/hw3/nbody_GPU_shared)
+==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0. For instructions on enabling permissions and to get more information see https://developer.nvidia.com/ERR_NVGPUCTRPERM
+==PROF== Disconnected from process 1393730
+Simulator is calculating positions correctly.
+4096 Bodies: average 14.524 Billion Interactions / second
+==WARNING== No kernels were profiled.
+==WARNING== Profiling kernels launched by child processes requires the --target-processes all option.
