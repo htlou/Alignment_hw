@@ -151,34 +151,6 @@ class GPT(nn.Module):
                 with torch.no_grad():
                     sd[k].copy_(sd_hf[k])
 
-device = 'cpu'
-if torch.cuda.is_available():
-    device = 'cuda'
-print(f"Using model at {device}")
-
-enc = tiktoken.get_encoding('gpt2')
-with open('input.txt', 'r') as f:
-    text = f.read()
-f.close()
-text = text[:1000]
-tokens = enc.encode(text)
-B, T = 4, 32
-buffer = torch.tensor(tokens[:B*T + 1]).to(device)
-x = buffer[:-1].view(B, T)
-y = buffer[1:].view(B, T)
-
-model = GPT(GPTConfig())
-model.to(device)
-
-optimizer = torch.optim.AdamW(model.parameters(), lr = 3e-4)
-
-for i in range(100):
-    optimizer.zero_grad()
-    logits, loss = model(x, y)
-    loss.backward()
-    optimizer.step()
-    print(f"Step {i}, Loss: {loss.item()}")
-
 # logits, loss = model(x, y)
 
 # print(logits.shape)
