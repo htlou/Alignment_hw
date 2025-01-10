@@ -1,6 +1,7 @@
 from modeling_gpt2 import GPT, GPTConfig
 import torch
 import tiktoken
+import time
 
 class DataLoader:
     def __init__(self, B, T):
@@ -37,7 +38,7 @@ with open('input.txt', 'r') as f:
 f.close()
 text = text[:1000]
 tokens = enc.encode(text)
-B, T = 4, 32
+B, T = 8, 1024
 buffer = torch.tensor(tokens[:B*T + 1]).to(device)
 x = buffer[:-1].view(B, T)
 y = buffer[1:].view(B, T)
@@ -48,11 +49,15 @@ model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr = 3e-4)
 
 data_loader = DataLoader(B, T)
+torch.set_float32_matmul_precision('high')
 
 for i in range(100):
+    start_time = time.time()
     x, y = data_loader.next_batch()
     optimizer.zero_grad()
     logits, loss = model(x, y)
     loss.backward()
     optimizer.step()
-    print(f"Step {i}, Loss: {loss.item()}")
+    torch.cuda.synchronize()
+    end_time = time.time()
+    print(f"Step {i}, Loss: {loss.item()}, Time: {end_time - start_time}")

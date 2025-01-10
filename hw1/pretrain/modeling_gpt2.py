@@ -23,6 +23,7 @@ class CausalSelfAttention(nn.Moudule):
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
         # Output projection
         self.c_proj = nn.Linear(config.n_embd, config.n_embd)
+        self.c_proj.DEBUG = True
         # Regularization
         self.n_head = config.n_head
         self.n_embd = config.n_embd
@@ -52,6 +53,7 @@ class MLP(nn.Module):
         self.c_fc = nn.Linear(config.n_embd, 4 * config.n_embd)
         self.gelu = nn.GELU(approximate='tanh')
         self.c_proj = nn.Linear(4 * config.n_embd, config.n_embd)
+        self.c_proj.DEBUG = True
 
     def forward(self, x):
         x = self.c_fc(x)
@@ -94,7 +96,10 @@ class GPT(nn.Module):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            std = 0.02
+            if hasattr(module, 'DEBUG') and module.DEBUG:
+                std *= (2* self.config.n_layer)**-0.5
+            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
