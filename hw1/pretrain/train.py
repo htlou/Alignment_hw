@@ -69,7 +69,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr = max_lr)
 data_loader = DataLoader(B, T)
 torch.set_float32_matmul_precision('high')
 
-for i in range(100):
+for i in range(steps):
     start_time = time.time()
     x, y = data_loader.next_batch()
     optimizer.zero_grad()
@@ -77,6 +77,9 @@ for i in range(100):
         logits, loss = model(x, y)
     loss.backward()
     norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    lr = get_lr(i)
+    for param in optimizer.param_groups:
+        param['lr'] = lr
     optimizer.step()
     torch.cuda.synchronize()
     end_time = time.time()
