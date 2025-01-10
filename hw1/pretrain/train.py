@@ -39,7 +39,14 @@ with open('input.txt', 'r') as f:
 f.close()
 text = text[:1000]
 tokens = enc.encode(text)
-B, T = 8, 1024
+
+batch_size = 524288
+B, T = 16, 1024
+assert batch_size % (B * T) == 0
+grad_accum = batch_size // (B * T)
+
+print(f"Batch size: {batch_size}, Gradient accumulation steps: {grad_accum}")
+
 buffer = torch.tensor(tokens[:B*T + 1]).to(device)
 x = buffer[:-1].view(B, T)
 y = buffer[1:].view(B, T)
@@ -73,8 +80,12 @@ for i in range(steps):
     start_time = time.time()
     x, y = data_loader.next_batch()
     optimizer.zero_grad()
-    with torch.autocast(device, dtype=torch.bfloat16):
-        logits, loss = model(x, y)
+    accumulated_loss = 0.0
+    for j in range(grad_accum):
+        with torch.autocast(device, dtype=torch.bfloat16):
+            logits, loss = model(x, y)
+        accumulated_loss += loss.item()
+    loss = accumulated_loss / grad_accum
     loss.backward()
     norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
     lr = get_lr(i)
